@@ -26,16 +26,39 @@ async function loadData(filename) {
     }
 }
 
+// Función para formatear números grandes
+function formatNumber(number) {
+    return new Intl.NumberFormat('es-ES').format(number);
+}
+
 // Función para actualizar el total de registros
 function updateTotalRecords(data) {
-    document.getElementById('totalRecords').textContent = data.length;
+    const total = formatNumber(data.length);
+    document.getElementById('totalRecords').innerHTML = `
+        <div class="metric-value">${total}</div>
+        <div class="metric-description">Total de registros en el conjunto de datos</div>
+    `;
 }
 
 // Función para actualizar el promedio general
 function updateAverageMetric(data, column) {
     const values = data.map(item => parseFloat(item[column])).filter(val => !isNaN(val));
+    if (values.length === 0) {
+        document.getElementById('averageMetric').innerHTML = `
+            <div class="metric-value">N/A</div>
+            <div class="metric-description">No hay datos disponibles para calcular el promedio</div>
+        `;
+        return;
+    }
     const average = values.reduce((a, b) => a + b, 0) / values.length;
-    document.getElementById('averageMetric').textContent = average.toFixed(2);
+    const description = column === 'release_year' ? 
+        'Año promedio de lanzamiento' : 
+        'Promedio de población afectada';
+    
+    document.getElementById('averageMetric').innerHTML = `
+        <div class="metric-value">${average.toFixed(2)}</div>
+        <div class="metric-description">${description}</div>
+    `;
 }
 
 // Función para crear o actualizar el gráfico de distribución
@@ -50,6 +73,8 @@ function updateDistributionChart(data, label, values) {
         acc[val] = (acc[val] || 0) + 1;
         return acc;
     }, {});
+
+    const title = label === 'tipo' ? 'Distribución por Tipo de Contenido' : 'Distribución por Año';
 
     distributionChart = new Chart(ctx, {
         type: 'pie',
@@ -71,7 +96,19 @@ function updateDistributionChart(data, label, values) {
             plugins: {
                 title: {
                     display: true,
-                    text: `Distribución por ${label}`
+                    text: title,
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const percentage = ((value / values.length) * 100).toFixed(1);
+                            return `${context.label}: ${formatNumber(value)} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
@@ -86,15 +123,22 @@ function updateTrendChart(data, xAxis, yAxis) {
         trendChart.destroy();
     }
 
+    const title = yAxis === 'duration' ? 
+        'Tendencia de Duración por Año' : 
+        'Tendencia de Población Afectada por Año';
+
+    const yAxisLabel = yAxis === 'duration' ? 'Duración (minutos)' : 'Población';
+
     trendChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.map(item => item[xAxis]).slice(0, 50),
             datasets: [{
-                label: yAxis,
-                data: data.map(item => item[yAxis]).slice(0, 50),
+                label: yAxisLabel,
+                data: data.map(item => parseFloat(item[yAxis])).slice(0, 50),
                 borderColor: '#3498db',
-                tension: 0.1
+                tension: 0.1,
+                fill: false
             }]
         },
         options: {
@@ -102,7 +146,33 @@ function updateTrendChart(data, xAxis, yAxis) {
             plugins: {
                 title: {
                     display: true,
-                    text: `${yAxis} a lo largo de ${xAxis}`
+                    text: title,
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            return `${yAxisLabel}: ${formatNumber(value)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: yAxisLabel
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Año'
+                    }
                 }
             }
         }
@@ -129,6 +199,10 @@ function updateComparisonChart(data, category) {
     const years = Object.keys(yearlyData).sort();
     const counts = years.map(year => yearlyData[year].length);
 
+    const title = category === 'type' ? 
+        'Comparación Anual de Títulos' : 
+        'Comparación Anual de Casos';
+
     comparisonChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -144,7 +218,32 @@ function updateComparisonChart(data, category) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Comparación Anual'
+                    text: title,
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Cantidad: ${formatNumber(context.raw)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Año'
+                    }
                 }
             }
         }
@@ -162,18 +261,22 @@ function updateStatistics(data, numericColumn) {
             <div>
                 <strong>Promedio</strong>
                 <p>N/A</p>
+                <small>No hay datos disponibles</small>
             </div>
             <div>
                 <strong>Máximo</strong>
                 <p>N/A</p>
+                <small>No hay datos disponibles</small>
             </div>
             <div>
                 <strong>Mínimo</strong>
                 <p>N/A</p>
+                <small>No hay datos disponibles</small>
             </div>
             <div>
                 <strong>Mediana</strong>
                 <p>N/A</p>
+                <small>No hay datos disponibles</small>
             </div>
         `;
         return;
@@ -197,23 +300,39 @@ function updateStatistics(data, numericColumn) {
         median = sortedValues[midPoint];
     }
 
+    const descriptions = numericColumn === 'release_year' ? {
+        avg: 'Año promedio de lanzamiento',
+        max: 'Año más reciente',
+        min: 'Año más antiguo',
+        median: 'Año central'
+    } : {
+        avg: 'Población promedio afectada',
+        max: 'Población máxima afectada',
+        min: 'Población mínima afectada',
+        median: 'Población central'
+    };
+
     const statsContainer = document.getElementById('statistics');
     statsContainer.innerHTML = `
         <div>
             <strong>Promedio</strong>
-            <p>${avg.toFixed(2)}</p>
+            <p>${formatNumber(avg.toFixed(2))}</p>
+            <small>${descriptions.avg}</small>
         </div>
         <div>
             <strong>Máximo</strong>
-            <p>${max.toFixed(2)}</p>
+            <p>${formatNumber(max.toFixed(2))}</p>
+            <small>${descriptions.max}</small>
         </div>
         <div>
             <strong>Mínimo</strong>
-            <p>${min.toFixed(2)}</p>
+            <p>${formatNumber(min.toFixed(2))}</p>
+            <small>${descriptions.min}</small>
         </div>
         <div>
             <strong>Mediana</strong>
-            <p>${median.toFixed(2)}</p>
+            <p>${formatNumber(median.toFixed(2))}</p>
+            <small>${descriptions.median}</small>
         </div>
     `;
 }
@@ -226,12 +345,30 @@ function updateDataTable(data) {
     const tableBody = document.getElementById('tableBody');
     const sortSelect = document.getElementById('sortColumn');
 
+    // Traducir nombres de columnas
+    const headerTranslations = {
+        'type': 'Tipo',
+        'title': 'Título',
+        'director': 'Director',
+        'cast': 'Reparto',
+        'country': 'País',
+        'date_added': 'Fecha Agregado',
+        'release_year': 'Año de Lanzamiento',
+        'rating': 'Clasificación',
+        'duration': 'Duración',
+        'listed_in': 'Categorías',
+        'description': 'Descripción',
+        'Year': 'Año',
+        'Population': 'Población',
+        'Cases': 'Casos'
+    };
+
     // Actualizar opciones de ordenamiento
     sortSelect.innerHTML = '<option value="">Ordenar por...</option>' +
-        headers.map(header => `<option value="${header}">${header}</option>`).join('');
+        headers.map(header => `<option value="${header}">${headerTranslations[header] || header}</option>`).join('');
 
     // Actualizar encabezados
-    headerRow.innerHTML = headers.map(header => `<th>${header}</th>`).join('');
+    headerRow.innerHTML = headers.map(header => `<th>${headerTranslations[header] || header}</th>`).join('');
 
     // Actualizar cuerpo de la tabla
     updateTablePage();
@@ -247,7 +384,10 @@ function updateTablePage() {
     const tableBody = document.getElementById('tableBody');
     tableBody.innerHTML = pageData.map(row => `
         <tr>
-            ${headers.map(header => `<td>${row[header]}</td>`).join('')}
+            ${headers.map(header => {
+                const value = row[header];
+                return `<td>${value !== null && value !== undefined ? value : 'N/A'}</td>`;
+            }).join('')}
         </tr>
     `).join('');
 
@@ -300,7 +440,7 @@ async function initializeDashboard() {
         const searchTerm = e.target.value.toLowerCase();
         const filteredData = currentData.filter(row => 
             Object.values(row).some(value => 
-                value.toString().toLowerCase().includes(searchTerm)
+                value && value.toString().toLowerCase().includes(searchTerm)
             )
         );
         currentPage = 1;

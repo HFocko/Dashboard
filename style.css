@@ -77,24 +77,53 @@ h1 {
 }
 
 .metric {
+    text-align: center;
+    padding: var(--spacing) 0;
+}
+
+.metric-value {
     font-size: 2.5rem;
     font-weight: bold;
     color: var(--secondary-color);
-    text-align: center;
-    margin: var(--spacing) 0;
+    margin-bottom: 5px;
+}
+
+.metric-description {
+    font-size: 0.9rem;
+    color: #666;
 }
 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
+    gap: 15px;
 }
 
 .stats-grid div {
     text-align: center;
-    padding: 10px;
+    padding: 15px;
     background-color: #f8f9fa;
     border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stats-grid strong {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.stats-grid p {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--secondary-color);
+    margin: 5px 0;
+}
+
+.stats-grid small {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
 }
 
 .table-controls {
@@ -119,6 +148,9 @@ h1 {
 .table-container {
     overflow-x: auto;
     margin-bottom: 15px;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 table {
@@ -137,6 +169,8 @@ th {
     background-color: var(--primary-color);
     color: white;
     cursor: pointer;
+    position: sticky;
+    top: 0;
 }
 
 th:hover {
@@ -147,11 +181,16 @@ tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
+tr:hover {
+    background-color: #f5f5f5;
+}
+
 .pagination {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 15px;
+    margin-top: 15px;
 }
 
 .pagination button {
@@ -161,11 +200,21 @@ tr:nth-child(even) {
     color: white;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #2980b9;
 }
 
 .pagination button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+#pageInfo {
+    font-size: 0.9rem;
+    color: #666;
 }
 
 .ml-2 {
@@ -192,6 +241,19 @@ tr:nth-child(even) {
     }
 
     .filters select {
+        width: 100%;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .table-controls {
+        flex-direction: column;
+    }
+
+    .search-input,
+    .sort-select {
         width: 100%;
     }
 }
