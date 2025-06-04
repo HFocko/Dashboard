@@ -154,11 +154,48 @@ function updateComparisonChart(data, category) {
 // Función para actualizar estadísticas
 function updateStatistics(data, numericColumn) {
     const values = data.map(item => parseFloat(item[numericColumn])).filter(val => !isNaN(val));
+    
+    // Check if we have any valid values
+    if (values.length === 0) {
+        const statsContainer = document.getElementById('statistics');
+        statsContainer.innerHTML = `
+            <div>
+                <strong>Promedio</strong>
+                <p>N/A</p>
+            </div>
+            <div>
+                <strong>Máximo</strong>
+                <p>N/A</p>
+            </div>
+            <div>
+                <strong>Mínimo</strong>
+                <p>N/A</p>
+            </div>
+            <div>
+                <strong>Mediana</strong>
+                <p>N/A</p>
+            </div>
+        `;
+        return;
+    }
+
     const sum = values.reduce((a, b) => a + b, 0);
     const avg = sum / values.length;
     const max = Math.max(...values);
     const min = Math.min(...values);
-    const median = values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
+    
+    // Calculate median properly handling both odd and even lengths
+    const sortedValues = values.sort((a, b) => a - b);
+    let median;
+    const midPoint = Math.floor(values.length / 2);
+    
+    if (values.length % 2 === 0) {
+        // Even length - average of two middle values
+        median = (sortedValues[midPoint - 1] + sortedValues[midPoint]) / 2;
+    } else {
+        // Odd length - middle value
+        median = sortedValues[midPoint];
+    }
 
     const statsContainer = document.getElementById('statistics');
     statsContainer.innerHTML = `
