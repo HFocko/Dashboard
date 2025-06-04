@@ -6,6 +6,7 @@
     --text-color: #2c3e50;
     --border-radius: 10px;
     --spacing: 20px;
+    --accent-color: #e74c3c;
 }
 
 * {
@@ -41,6 +42,11 @@ h1 {
     font-size: 1.8rem;
 }
 
+.filters {
+    display: flex;
+    gap: 10px;
+}
+
 .filters select {
     padding: 8px 16px;
     border: 1px solid #ddd;
@@ -59,6 +65,11 @@ h1 {
     padding: var(--spacing);
     border-radius: var(--border-radius);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
 }
 
 .card.wide {
@@ -82,10 +93,32 @@ h1 {
 .stats-grid div {
     text-align: center;
     padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.table-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.sort-select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 
 .table-container {
     overflow-x: auto;
+    margin-bottom: 15px;
 }
 
 table {
@@ -103,10 +136,40 @@ th, td {
 th {
     background-color: var(--primary-color);
     color: white;
+    cursor: pointer;
+}
+
+th:hover {
+    background-color: #34495e;
 }
 
 tr:nth-child(even) {
     background-color: #f9f9f9;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: none;
+    background-color: var(--secondary-color);
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.ml-2 {
+    margin-left: 8px;
 }
 
 @media (max-width: 768px) {
@@ -121,5 +184,14 @@ tr:nth-child(even) {
     
     .card {
         margin-bottom: var(--spacing);
+    }
+
+    .filters {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filters select {
+        width: 100%;
     }
 }

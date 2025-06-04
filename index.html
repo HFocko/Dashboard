@@ -1,46 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Analysis Dashboard</title>
+    <title>Panel de Análisis de Datos</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="dashboard">
         <header>
-            <h1>Data Analysis Dashboard</h1>
+            <h1>Panel de Análisis de Datos</h1>
             <div class="filters">
                 <select id="datasetSelect">
-                    <option value="netflix">Netflix Titles</option>
-                    <option value="addiction">Addiction Population Data</option>
+                    <option value="netflix">Títulos de Netflix</option>
+                    <option value="addiction">Datos de Población y Adicción</option>
+                </select>
+                <select id="yearFilter" class="ml-2">
+                    <option value="">Todos los Años</option>
                 </select>
             </div>
         </header>
         
         <main class="dashboard-grid">
             <div class="card">
-                <h2>Total Records</h2>
+                <h2>Total de Registros</h2>
                 <div id="totalRecords" class="metric">0</div>
             </div>
             
             <div class="card">
-                <h2>Distribution Chart</h2>
+                <h2>Promedio General</h2>
+                <div id="averageMetric" class="metric">0</div>
+            </div>
+
+            <div class="card">
+                <h2>Distribución por Categoría</h2>
                 <canvas id="distributionChart"></canvas>
             </div>
             
             <div class="card wide">
-                <h2>Trend Analysis</h2>
+                <h2>Análisis de Tendencias</h2>
                 <canvas id="trendChart"></canvas>
             </div>
             
             <div class="card">
-                <h2>Key Statistics</h2>
+                <h2>Estadísticas Clave</h2>
                 <div id="statistics" class="stats-grid"></div>
+            </div>
+
+            <div class="card">
+                <h2>Comparación Anual</h2>
+                <canvas id="comparisonChart"></canvas>
             </div>
             
             <div class="card wide">
-                <h2>Data Table</h2>
+                <h2>Tabla de Datos</h2>
+                <div class="table-controls">
+                    <input type="text" id="searchInput" placeholder="Buscar..." class="search-input">
+                    <select id="sortColumn" class="sort-select">
+                        <option value="">Ordenar por...</option>
+                    </select>
+                </div>
                 <div class="table-container">
                     <table id="dataTable">
                         <thead>
@@ -48,6 +67,11 @@
                         </thead>
                         <tbody id="tableBody"></tbody>
                     </table>
+                </div>
+                <div class="pagination">
+                    <button id="prevPage">Anterior</button>
+                    <span id="pageInfo">Página 1 de 1</span>
+                    <button id="nextPage">Siguiente</button>
                 </div>
             </div>
         </main>
