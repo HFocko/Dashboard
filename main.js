@@ -7,6 +7,7 @@ let comparisonChart = null;
 let currentPage = 1;
 const rowsPerPage = 10;
 let currentData = [];
+let originalData = [];
 
 // Función para cargar y analizar datos CSV
 async function loadData(filename) {
@@ -28,6 +29,9 @@ async function loadData(filename) {
 
 // Función para formatear números grandes
 function formatNumber(number) {
+    if (isNaN(number) || number === null || number === undefined) {
+        return 'N/A';
+    }
     return new Intl.NumberFormat('es-ES').format(number);
 }
 
@@ -51,12 +55,20 @@ function updateAverageMetric(data, column) {
         return;
     }
     const average = values.reduce((a, b) => a + b, 0) / values.length;
-    const description = column === 'release_year' ? 
-        'Año promedio de lanzamiento' : 
-        'Promedio de población afectada';
+    
+    let description = '';
+    if (column === 'release_year') {
+        description = 'Año promedio de lanzamiento';
+    } else if (column === 'Population') {
+        description = 'Promedio de población afectada';
+    } else if (column === 'math score') {
+        description = 'Promedio de puntuación en matemáticas';
+    } else {
+        description = 'Promedio general';
+    }
     
     document.getElementById('averageMetric').innerHTML = `
-        <div class="metric-value">${average.toFixed(2)}</div>
+        <div class="metric-value">${formatNumber(average.toFixed(2))}</div>
         <div class="metric-description">${description}</div>
     `;
 }
@@ -74,7 +86,16 @@ function updateDistributionChart(data, label, values) {
         return acc;
     }, {});
 
-    const title = label === 'tipo' ? 'Distribución por Tipo de Contenido' : 'Distribución por Año';
+    let title = '';
+    if (label === 'tipo') {
+        title = 'Distribución por Tipo de Contenido';
+    } else if (label === 'Año') {
+        title = 'Distribución por Año';
+    } else if (label === 'gender') {
+        title = 'Distribución por Género';
+    } else {
+        title = 'Distribución por Categoría';
+    }
 
     distributionChart = new Chart(ctx, {
         type: 'pie',
@@ -87,7 +108,10 @@ function updateDistributionChart(data, label, values) {
                     '#3498db',
                     '#9b59b6',
                     '#f1c40f',
-                    '#e74c3c'
+                    '#e74c3c',
+                    '#34495e',
+                    '#16a085',
+                    '#e67e22'
                 ]
             }]
         },
@@ -123,19 +147,37 @@ function updateTrendChart(data, xAxis, yAxis) {
         trendChart.destroy();
     }
 
-    const title = yAxis === 'duration' ? 
-        'Tendencia de Duración por Año' : 
-        'Tendencia de Población Afectada por Año';
+    let title = '';
+    let yAxisLabel = '';
+    
+    if (yAxis === 'duration') {
+        title = 'Tendencia de Duración por Año';
+        yAxisLabel = 'Duración (minutos)';
+    } else if (yAxis === 'Population') {
+        title = 'Tendencia de Población Afectada por Año';
+        yAxisLabel = 'Población';
+    } else if (yAxis === 'math score') {
+        title = 'Tendencia de Puntuaciones de Matemáticas';
+        yAxisLabel = 'Puntuación';
+    } else {
+        title = 'Tendencia de Datos';
+        yAxisLabel = 'Valor';
+    }
 
-    const yAxisLabel = yAxis === 'duration' ? 'Duración (minutos)' : 'Población';
+    // Filtrar y ordenar datos para el gráfico
+    const filteredData = data.filter(item => 
+        item[xAxis] && item[yAxis] && 
+        !isNaN(parseFloat(item[xAxis])) && 
+        !isNaN(parseFloat(item[yAxis]))
+    ).slice(0, 50);
 
     trendChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(item => item[xAxis]).slice(0, 50),
+            labels: filteredData.map(item => item[xAxis]),
             datasets: [{
                 label: yAxisLabel,
-                data: data.map(item => parseFloat(item[yAxis])).slice(0, 50),
+                data: filteredData.map(item => parseFloat(item[yAxis])),
                 borderColor: '#3498db',
                 tension: 0.1,
                 fill: false
@@ -171,7 +213,7 @@ function updateTrendChart(data, xAxis, yAxis) {
                 x: {
                     title: {
                         display: true,
-                        text: 'Año'
+                        text: xAxis === 'release_year' ? 'Año' : xAxis
                     }
                 }
             }
@@ -187,21 +229,35 @@ function updateComparisonChart(data, category) {
         comparisonChart.destroy();
     }
 
+    let yearColumn = 'release_year';
+    if (data.length > 0 && data[0].hasOwnProperty('Year')) {
+        yearColumn = 'Year';
+    }
+
     const yearlyData = data.reduce((acc, item) => {
-        const year = item.release_year || item.Year;
-        if (!acc[year]) {
-            acc[year] = [];
+        const year = item[yearColumn];
+        if (year && !isNaN(parseFloat(year))) {
+            if (!acc[year]) {
+                acc[year] = [];
+            }
+            acc[year].push(item);
         }
-        acc[year].push(item);
         return acc;
     }, {});
 
     const years = Object.keys(yearlyData).sort();
     const counts = years.map(year => yearlyData[year].length);
 
-    const title = category === 'type' ? 
-        'Comparación Anual de Títulos' : 
-        'Comparación Anual de Casos';
+    let title = '';
+    if (category === 'type') {
+        title = 'Comparación Anual de Títulos';
+    } else if (category === 'Year') {
+        title = 'Comparación Anual de Casos';
+    } else if (category === 'gender') {
+        title = 'Comparación Anual de Estudiantes';
+    } else {
+        title = 'Comparación Anual';
+    }
 
     comparisonChart = new Chart(ctx, {
         type: 'bar',
@@ -254,7 +310,6 @@ function updateComparisonChart(data, category) {
 function updateStatistics(data, numericColumn) {
     const values = data.map(item => parseFloat(item[numericColumn])).filter(val => !isNaN(val));
     
-    // Check if we have any valid values
     if (values.length === 0) {
         const statsContainer = document.getElementById('statistics');
         statsContainer.innerHTML = `
@@ -287,30 +342,46 @@ function updateStatistics(data, numericColumn) {
     const max = Math.max(...values);
     const min = Math.min(...values);
     
-    // Calculate median properly handling both odd and even lengths
-    const sortedValues = values.sort((a, b) => a - b);
+    const sortedValues = [...values].sort((a, b) => a - b);
     let median;
     const midPoint = Math.floor(values.length / 2);
     
     if (values.length % 2 === 0) {
-        // Even length - average of two middle values
         median = (sortedValues[midPoint - 1] + sortedValues[midPoint]) / 2;
     } else {
-        // Odd length - middle value
         median = sortedValues[midPoint];
     }
 
-    const descriptions = numericColumn === 'release_year' ? {
-        avg: 'Año promedio de lanzamiento',
-        max: 'Año más reciente',
-        min: 'Año más antiguo',
-        median: 'Año central'
-    } : {
-        avg: 'Población promedio afectada',
-        max: 'Población máxima afectada',
-        min: 'Población mínima afectada',
-        median: 'Población central'
-    };
+    let descriptions = {};
+    if (numericColumn === 'release_year') {
+        descriptions = {
+            avg: 'Año promedio de lanzamiento',
+            max: 'Año más reciente',
+            min: 'Año más antiguo',
+            median: 'Año central'
+        };
+    } else if (numericColumn === 'Population') {
+        descriptions = {
+            avg: 'Población promedio afectada',
+            max: 'Población máxima afectada',
+            min: 'Población mínima afectada',
+            median: 'Población central'
+        };
+    } else if (numericColumn === 'math score') {
+        descriptions = {
+            avg: 'Puntuación promedio en matemáticas',
+            max: 'Puntuación máxima en matemáticas',
+            min: 'Puntuación mínima en matemáticas',
+            median: 'Puntuación central en matemáticas'
+        };
+    } else {
+        descriptions = {
+            avg: 'Valor promedio',
+            max: 'Valor máximo',
+            min: 'Valor mínimo',
+            median: 'Valor central'
+        };
+    }
 
     const statsContainer = document.getElementById('statistics');
     statsContainer.innerHTML = `
@@ -340,6 +411,8 @@ function updateStatistics(data, numericColumn) {
 // Función para actualizar la tabla de datos
 function updateDataTable(data) {
     currentData = data;
+    if (data.length === 0) return;
+    
     const headers = Object.keys(data[0]);
     const headerRow = document.getElementById('tableHeader');
     const tableBody = document.getElementById('tableBody');
@@ -360,7 +433,15 @@ function updateDataTable(data) {
         'description': 'Descripción',
         'Year': 'Año',
         'Population': 'Población',
-        'Cases': 'Casos'
+        'Cases': 'Casos',
+        'gender': 'Género',
+        'race/ethnicity': 'Raza/Etnia',
+        'parental level of education': 'Nivel Educativo Parental',
+        'lunch': 'Almuerzo',
+        'test preparation course': 'Curso de Preparación',
+        'math score': 'Puntuación Matemáticas',
+        'reading score': 'Puntuación Lectura',
+        'writing score': 'Puntuación Escritura'
     };
 
     // Actualizar opciones de ordenamiento
@@ -368,7 +449,7 @@ function updateDataTable(data) {
         headers.map(header => `<option value="${header}">${headerTranslations[header] || header}</option>`).join('');
 
     // Actualizar encabezados
-    headerRow.innerHTML = headers.map(header => `<th>${headerTranslations[header] || header}</th>`).join('');
+    headerRow.innerHTML = headers.map(header => `<th>${headerTranslations[header] || header}</th>`).join('') + '<th>Acciones</th>';
 
     // Actualizar cuerpo de la tabla
     updateTablePage();
@@ -379,15 +460,22 @@ function updateTablePage() {
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const pageData = currentData.slice(start, end);
+    
+    if (currentData.length === 0) return;
+    
     const headers = Object.keys(currentData[0]);
-
     const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = pageData.map(row => `
+    
+    tableBody.innerHTML = pageData.map((row, index) => `
         <tr>
             ${headers.map(header => {
                 const value = row[header];
-                return `<td>${value !== null && value !== undefined ? value : 'N/A'}</td>`;
+                return `<td>${value !== null && value !== undefined && value !== '' ? value : 'N/A'}</td>`;
             }).join('')}
+            <td>
+                <button class="btn-edit" onclick="editRow(${start + index})">Editar</button>
+                <button class="btn-delete" onclick="deleteRow(${start + index})">Eliminar</button>
+            </td>
         </tr>
     `).join('');
 
@@ -398,6 +486,147 @@ function updateTablePage() {
     document.getElementById('nextPage').disabled = currentPage === totalPages;
 }
 
+// Funciones CRUD
+function addNewRow() {
+    if (originalData.length === 0) return;
+    
+    const headers = Object.keys(originalData[0]);
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Agregar Nuevo Registro</h3>
+            <form id="addForm">
+                ${headers.map(header => `
+                    <div class="form-group">
+                        <label for="${header}">${header}:</label>
+                        <input type="text" id="${header}" name="${header}" required>
+                    </div>
+                `).join('')}
+                <div class="form-actions">
+                    <button type="submit">Guardar</button>
+                    <button type="button" onclick="closeModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('addForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const newRow = {};
+        headers.forEach(header => {
+            newRow[header] = formData.get(header);
+        });
+        
+        originalData.push(newRow);
+        currentData.push(newRow);
+        updateTablePage();
+        closeModal();
+        updateDashboardData();
+    });
+}
+
+function editRow(index) {
+    const row = currentData[index];
+    const headers = Object.keys(row);
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Editar Registro</h3>
+            <form id="editForm">
+                ${headers.map(header => `
+                    <div class="form-group">
+                        <label for="${header}">${header}:</label>
+                        <input type="text" id="${header}" name="${header}" value="${row[header] || ''}" required>
+                    </div>
+                `).join('')}
+                <div class="form-actions">
+                    <button type="submit">Guardar</button>
+                    <button type="button" onclick="closeModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('editForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        headers.forEach(header => {
+            row[header] = formData.get(header);
+        });
+        
+        updateTablePage();
+        closeModal();
+        updateDashboardData();
+    });
+}
+
+function deleteRow(index) {
+    if (confirm('¿Estás seguro de que quieres eliminar este registro?')) {
+        const rowToDelete = currentData[index];
+        const originalIndex = originalData.findIndex(row => 
+            Object.keys(row).every(key => row[key] === rowToDelete[key])
+        );
+        
+        if (originalIndex !== -1) {
+            originalData.splice(originalIndex, 1);
+        }
+        currentData.splice(index, 1);
+        
+        // Ajustar página si es necesario
+        const totalPages = Math.ceil(currentData.length / rowsPerPage);
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        }
+        
+        updateTablePage();
+        updateDashboardData();
+    }
+}
+
+function closeModal() {
+    const modal = document.querySelector('.modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Función para actualizar todos los datos del dashboard
+function updateDashboardData() {
+    const datasetSelect = document.getElementById('datasetSelect');
+    const selectedDataset = datasetSelect.value;
+    
+    if (selectedDataset === 'netflix') {
+        updateTotalRecords(currentData);
+        updateDistributionChart(currentData, 'tipo', currentData.map(item => item.type));
+        updateTrendChart(currentData, 'release_year', 'duration');
+        updateStatistics(currentData, 'release_year');
+        updateAverageMetric(currentData, 'release_year');
+        updateComparisonChart(currentData, 'type');
+    } else if (selectedDataset === 'addiction') {
+        updateTotalRecords(currentData);
+        updateDistributionChart(currentData, 'Año', currentData.map(item => item.Year));
+        updateTrendChart(currentData, 'Year', 'Population');
+        updateStatistics(currentData, 'Population');
+        updateAverageMetric(currentData, 'Population');
+        updateComparisonChart(currentData, 'Year');
+    } else if (selectedDataset === 'students') {
+        updateTotalRecords(currentData);
+        updateDistributionChart(currentData, 'gender', currentData.map(item => item.gender));
+        updateTrendChart(currentData, 'math score', 'reading score');
+        updateStatistics(currentData, 'math score');
+        updateAverageMetric(currentData, 'math score');
+        updateComparisonChart(currentData, 'gender');
+    }
+}
+
 // Función para inicializar el dashboard
 async function initializeDashboard() {
     const datasetSelect = document.getElementById('datasetSelect');
@@ -406,11 +635,35 @@ async function initializeDashboard() {
     const prevPage = document.getElementById('prevPage');
     const nextPage = document.getElementById('nextPage');
     
+    // Agregar opción de estudiantes al selector
+    const studentsOption = document.createElement('option');
+    studentsOption.value = 'students';
+    studentsOption.textContent = 'Rendimiento de Estudiantes';
+    datasetSelect.appendChild(studentsOption);
+    
+    // Agregar botón para agregar nuevos registros
+    const addButton = document.createElement('button');
+    addButton.textContent = 'Agregar Registro';
+    addButton.className = 'btn-add';
+    addButton.onclick = addNewRow;
+    document.querySelector('.table-controls').appendChild(addButton);
+    
     async function updateDashboard() {
         const selectedDataset = datasetSelect.value;
-        const filename = selectedDataset === 'netflix' ? 'netflix_titles.csv' : 'addiction_population_data.csv';
+        let filename = '';
+        
+        if (selectedDataset === 'netflix') {
+            filename = 'netflix_titles.csv';
+        } else if (selectedDataset === 'addiction') {
+            filename = 'addiction_population_data.csv';
+        } else if (selectedDataset === 'students') {
+            filename = 'student_performance.csv';
+        }
         
         const data = await loadData(filename);
+        originalData = [...data];
+        currentData = [...data];
+        currentPage = 1;
         
         if (data.length > 0) {
             updateTotalRecords(data);
@@ -421,12 +674,18 @@ async function initializeDashboard() {
                 updateStatistics(data, 'release_year');
                 updateAverageMetric(data, 'release_year');
                 updateComparisonChart(data, 'type');
-            } else {
+            } else if (selectedDataset === 'addiction') {
                 updateDistributionChart(data, 'Año', data.map(item => item.Year));
                 updateTrendChart(data, 'Year', 'Population');
                 updateStatistics(data, 'Population');
                 updateAverageMetric(data, 'Population');
                 updateComparisonChart(data, 'Year');
+            } else if (selectedDataset === 'students') {
+                updateDistributionChart(data, 'gender', data.map(item => item.gender));
+                updateTrendChart(data, 'math score', 'reading score');
+                updateStatistics(data, 'math score');
+                updateAverageMetric(data, 'math score');
+                updateComparisonChart(data, 'gender');
             }
             
             updateDataTable(data);
@@ -438,13 +697,14 @@ async function initializeDashboard() {
     
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        const filteredData = currentData.filter(row => 
+        const filteredData = originalData.filter(row => 
             Object.values(row).some(value => 
                 value && value.toString().toLowerCase().includes(searchTerm)
             )
         );
+        currentData = filteredData;
         currentPage = 1;
-        updateDataTable(filteredData);
+        updateTablePage();
     });
 
     sortColumn.addEventListener('change', (e) => {
@@ -453,6 +713,15 @@ async function initializeDashboard() {
             currentData.sort((a, b) => {
                 const valA = a[column];
                 const valB = b[column];
+                
+                // Handle numeric sorting
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                
+                // Handle string sorting
                 return valA < valB ? -1 : valA > valB ? 1 : 0;
             });
             updateTablePage();
@@ -473,6 +742,11 @@ async function initializeDashboard() {
             updateTablePage();
         }
     });
+
+    // Hacer funciones globales para los botones
+    window.editRow = editRow;
+    window.deleteRow = deleteRow;
+    window.closeModal = closeModal;
 
     await updateDashboard();
 }
